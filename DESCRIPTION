@@ -1,0 +1,18 @@
+Package: mIHC
+Title: Multiplex IHC Functions
+Version: 0.0.0.9000
+Authors@R: 
+    person("Wes", "Horton", , "hortowe@ohsu.edu", role = c("aut", "cre"))
+Description: Collection of plotting and data wrangling functions for use with mIHC reports.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3.9000
+Imports: 
+    ggplot2,
+    ggpubr,
+    gridExtra,
+    knitr,
+    readxl,
+    wrh.rUtils
