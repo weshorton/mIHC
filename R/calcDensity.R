@@ -35,7 +35,7 @@ calcDensity <- function(data_dt, meta_dt = NULL, areaCol_v = "Area", idCol_v = "
       if (!areaCol_v %in% colnames(meta_dt)) stop("Metadata doesn't have area column and neither does data. Can't get density without area!\n")
     }
 
-    ddata_dt <- merge(data_dt, meta_dt[,mget(c(idCol_v, areaCol_v)),drop = F], by = idCol_v, sort = F, all = T)
+    data_dt <- merge(data_dt, meta_dt[,mget(c(idCol_v, areaCol_v)),drop = F], by = idCol_v, sort = F, all = T)
 
   } # fi
 
