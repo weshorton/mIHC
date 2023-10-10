@@ -17,6 +17,8 @@ averageROIs <- function(data_dt, sampleCol_v = "Sample_ID", prefix_v = "", split
     #' the same general format, but samples can be related to each other in different ways, based on the experiment. Below are examples from previous projects
     #' Future work should try to see if this can be standardized better, or maybe variable names changed to be more informative.
     #' 
+    #' I think this can be simplified a lot...
+    #' 
     #' AMTEC 
     #'   - A given sample can have one or multiple time points
     #'   - Each timepoint can have multiple ROIs from its slide
@@ -32,9 +34,10 @@ averageROIs <- function(data_dt, sampleCol_v = "Sample_ID", prefix_v = "", split
     #'   - Each report is per sample (i.e. global ID), with one pie/bar containng the average values of the sample IDs
     #'   - Also make cohort report
     #' MdR01
-    #'   - Each ROI is unique
-    #'   - no averaging, only run this script to reformat
+    #'   - ROI is not really used.
+    #'   - no averaging, only run this function to reformat
     #'   - Pairs of samples format is: [0-9]{1}-[0-9]{1}[BTLR]; with [BLTR] distinguishing each pair.
+    #'   - Set by_v == sampleCol_v to not average
     #'   - Reports are per sample, with two bars/pies per plot (one for each member of pair)
     #' 
   #' @return data.table with same columns. Rows are now summarized by by_v.
