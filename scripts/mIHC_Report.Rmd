@@ -1,0 +1,444 @@
+---
+title: "mIHC Report"
+author: "Wes Horton"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+      css: doc.css
+params:
+  pt: "empty"
+  proj: "empty"
+  cellFile: "empty"
+  funcFile: "empty"
+  metaFile: "empty"
+  colorFile: "empty"
+  configFile: "empty"
+---
+
+```{r libraries, echo = F, message=F, warning=FALSE}
+library(readxl)
+library(data.table)
+library(wrh.rUtils)
+library(ggplot2)
+library(ggpubr)
+library(gridExtra)
+library(plotly)
+library(tools)
+library(kableExtra)
+source("~/my_tool_repos/mIHC/fxns.R")
+
+```
+
+```{r loadData, echo = F}
+
+### Load data
+pt_v <- params$pt
+proj_v <- params$proj
+cell_dt <- readCSVOrExcel(params$cellFile)
+func_lsdt <- readAllExcel(params$funcFile)
+meta_dt <- readCSVOrExcel(params$metaFile)
+color_dt <- readCSVOrExcel(params$colorFile)
+config_dt <- readCSVOrExcel(params$configFile)
+
+### For testing
+# pt_v <- 12
+# proj_v <- "AMTEC2023_V3"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_ptAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_ptAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_gatingConfig.csv")
+
+### Clean test
+# pt_v <- 12
+# pt_v <- 23
+# pt_v <- 19
+# proj_v <- "AMTEC2023_V5"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_gatingConfig.csv")
+
+### AMTECRESTAIN TEST
+# pt_v <- 133
+# proj_v <- "AMTEC2023March_V2"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_gatingConfig.csv")
+
+
+### Make sure patients are characters
+meta_dt$Slide <- as.character(meta_dt$Slide)
+cell_dt$Slide <- as.character(cell_dt$Slide)
+meta_dt$timepoint <- as.character(meta_dt$timepoint)
+```
+
+```{r temporaryColorStuff, echo = F}
+### Still determining colors to use for functional markers. Right now they're some random colors I picked, but they don't get used.
+### Sam is using default colors in the reports. I want to assign the colors (and in the future use special colors), but for consistency
+### right now, I'll just assign the previously-assigned default colors.
+color_dt[Population == "CD163+", Hex := "#F9756d"]
+color_dt[Population == "GRZB+", Hex := "#00Bf7D"]
+color_dt[Population == "KI67+", Hex := "#A3A602"]
+color_dt[Population == "PD1+", Hex := "#00AFF6"]
+color_dt[Population == "PDL1+", Hex := "#E76AF3"]
+color_dt[Population == "CCR2+", Hex := "#55BCC2"]
+```
+
+```{r wrangleData, echo = F}
+
+### Subset metadata for AMTEC ID
+### TO DO - make this an argument in generateReports call to this markdown. Won't always have the same variables here
+#subMeta_dt <- unique(meta_dt[`AMTEC ID` == pt_v,mget(c("Slide", "best clinical response", "AMTEC ID", "timepoint"))])
+subMeta_dt <- unique(meta_dt[`AMTEC ID` == pt_v,mget(c("Slide", "AMTEC ID", "timepoint"))])
+
+### TESTING - add bx to timepoint (for biopsy)
+subMeta_dt$timepoint <- paste0("bx", subMeta_dt$timepoint)
+
+### Make sure no duplicated timepoints
+if (nrow(subMeta_dt[,.N,by=timepoint][N>1,]) > 0) stop("Check timepoint assignments. Should be unique at this level.")
+
+### Subset data
+subCell_dt <- cell_dt[Slide %in% subMeta_dt$Slide,]
+subFunc_lsdt <- func_lsdt[subMeta_dt$Slide]
+
+### Check that they have same rows
+if (nrow(subMeta_dt) != nrow(subCell_dt)) stop("Unequal rows of cell data and meta. Check inputs.")
+if (nrow(subMeta_dt) != length(subFunc_lsdt)) stop("Unequal rows of functional data and meta. Check inputs.")
+
+### Determine if multiple entries
+if (nrow(subMeta_dt) > 1) {
+  multi_v <- T
+  cat(sprintf("There are %s entries for this patient.\n", nrow(subMeta_dt)))
+} else {
+  multi_v <- F
+  cat(sprintf("There are %s entries for this patient.\n", nrow(subMeta_dt)))
+}
+
+### Get plots - not sure which way to do this
+#plotCols_v <- grep("stacked|pie|sunburst", colnames(config_dt), value = T)
+
+plotCols_lsv <- list("stackedBar" = grep("[Ss]tacked[Bb]ar", colnames(config_dt), value = T),
+                     "pie" = grep("[Pp]ie[Cc]hart", colnames(config_dt), value = T),
+                     "sunburst" = grep("[Ss]unburst", colnames(config_dt), value = T),
+                     "bar" = grep("[Bb]ar[Pp]lot", colnames(config_dt), value = T))
+
+```
+
+```{r makeStacked, echo = F, fig.height= 7, fig.width=12}
+
+for (i in 1:length(plotCols_lsv$stacked)) {
+  
+  ### Get current column and subset config
+  currPlotCol_v <- plotCols_lsv$stacked[i]
+  currPlotName_v <- simpleCap(gsub("\\.", " ", gsub("^.*_", "", currPlotCol_v)))
+  currConfig_dt <- config_dt[!is.na(get(currPlotCol_v)),mget(c("Class", currPlotCol_v))]
+  currLevels_v <- currConfig_dt$Class[order(currConfig_dt[[currPlotCol_v]])]
+  
+  ### Subset data columns and merge metadata
+  currData_dt <- merge(subMeta_dt[,mget(c("Slide", "timepoint"))],
+                       subCell_dt[,mget(c("Slide", currConfig_dt$Class))], 
+                       by.x = "Slide", by.y = "Slide", sort = F)
+  setkey(currData_dt, "timepoint") # sort by timepoint
+  
+  ### Melt data
+  currMelt_dt <- melt(currData_dt, id.vars = c("Slide", "timepoint"))
+  
+  ### Add metadata
+  #currMelt_dt <- merge(currMelt_dt, subMeta_dt, by.x = "Slide", by.y = "Slide", all = T)
+  
+  ### Subset colors
+  currColor_dt <- color_dt[Population %in% currConfig_dt$Class,]
+  
+  ### Order output
+  currMelt_dt$variable <- factor(currMelt_dt$variable, levels = currLevels_v)
+  currColor_dt <- currColor_dt[match(currLevels_v, currColor_dt$Population)]
+  
+  ### Make sure population levels match?
+  
+  ### Make plot
+  curr_gg <- ggplot(data = currMelt_dt, aes(x = timepoint, y = value, fill = variable)) +
+    geom_bar(position = "stack", stat = "identity") + 
+    #my_theme() +
+    big_label() +
+    scale_fill_manual(values = currColor_dt$Hex, breaks = currColor_dt$Population) +
+    ggtitle(currPlotName_v) + labs(y = bquote('Cell Density (cells / mm'^2*')'),
+                                   fill = "Cell Type")
+  
+  ### Make table
+  display_dt <- myT(currData_dt[,mget(c("timepoint", currLevels_v))], newName_v = "Class")
+  display_dt <- convertDFT(round(convertDFT(display_dt, col_v = "Class"), digits = 2), newName_v = "Class")
+  display_grob <- tableGrob(display_dt, rows = NULL, theme = ttheme_default(base_size = 16))
+  
+  ### Output
+  foo <- grid.arrange(grobs = list(display_grob, curr_gg), ncol = 2)
+  
+}
+
+
+
+```
+
+```{r makePie, echo = F, fig.width=10}
+
+for (i in 1:length(plotCols_lsv$pie)) {
+  
+  ### Get current column and subset config
+  currPlotCol_v <- plotCols_lsv$pie[i]
+  currPlotName_v <- simpleCap(gsub("\\.", " ", gsub("^.*_", "", currPlotCol_v)))
+  currConfig_dt <- config_dt[!is.na(get(currPlotCol_v)),mget(c("Class", currPlotCol_v))]
+  currLevels_v <- currConfig_dt$Class[order(currConfig_dt[[currPlotCol_v]])]
+  
+  ### Calculate percentages (and subset columns)
+  currData_df <- convertDFT(subCell_dt[,mget(c("Slide", currConfig_dt$Class))], col_v = "Slide")
+  currData_df <- currData_df / rowSums(currData_df) * 100
+  
+  ### Merge metadata
+  currData_dt <- merge(subMeta_dt[,mget(c("Slide", "timepoint"))],
+                       convertDFT(currData_df, newName_v = "Slide"),
+                       by = "Slide", sort = F)
+  setkey(currData_dt, "timepoint")
+  
+  ### Melt
+  currMelt_dt <- data.table::melt(currData_dt, id.vars = c("Slide", "timepoint"))
+  
+  ### Subset colors
+  currColor_dt <- color_dt[Population %in% currConfig_dt$Class,]
+  
+  ### Order output
+  currMelt_dt$variable <- factor(currMelt_dt$variable, levels = currLevels_v)
+  
+  ### Make plot
+  curr_lsgg <- lapply(unique(currMelt_dt$timepoint), function(x) {
+    plot_gg <- ggplot(data = currMelt_dt[timepoint == x,], aes(x = timepoint, y = value, fill = variable)) +
+      geom_bar(width = 1, stat = "identity") + pie_theme +
+      coord_polar(theta = "y", start = 0) +
+      scale_fill_manual(values = currColor_dt$Hex, breaks = currColor_dt$Population) +
+      ggtitle(x)
+    return(plot_gg)
+  })
+  
+  ### Get columns
+  ncol_v <- ifelse(length(curr_lsgg) == 1, 1, 2)
+  nrow_v <- ceiling(length(curr_lsgg) / 2)
+  
+  ### Grid plot
+  curr_gg <- ggarrange(plotlist = curr_lsgg, ncol = ncol_v, nrow = nrow_v, common.legend = T, legend = "right")
+  out_gg <- annotate_figure(p = curr_gg, top = text_grob(currPlotName_v, size = 24))
+  
+  ### Print
+  print(out_gg)
+  
+}
+
+```
+
+\pretolerance=10000
+
+```{r makeBar, echo = F, fig.width=20, fig.height=10}
+# my_plot_hook <- function(x, options)
+#   paste("\n", knitr::hook_plot_tex(x, options), "\n")
+# knitr::knit_hooks$set(plot = my_plot_hook)
+
+for (i in 1:length(plotCols_lsv$bar)) {
+  
+  ### Get current column and subset config
+  currPlotCol_v <- plotCols_lsv$bar[i]
+  currPlotName_v <- simpleCap(gsub("\\.", " ", gsub("^.*_", "", currPlotCol_v)))
+  currConfig_dt <- config_dt[!is.na(get(currPlotCol_v)),mget(c("Class", "Gate", currPlotCol_v))]
+  currConfig_dt <- currConfig_dt[get(currPlotCol_v) != "",]
+  
+  ### Grab which functional markers to plot (or all if not specified)
+  currFuncMarkers_v <- gsub("Areap_|p$", "", currConfig_dt[get(currPlotCol_v) == "T",Gate])
+  if (length(currFuncMarkers_v) == 0) currFuncMarkers_v <- setdiff(colnames(subFunc_lsdt[[1]]), "Class")
+  
+  ### Remove from config and make sure plot column is numeric
+  currConfig_dt <- currConfig_dt[get(currPlotCol_v) != "T",]
+  currConfig_dt[[currPlotCol_v]] <- as.numeric(currConfig_dt[[currPlotCol_v]])
+  
+  currLevels_v <- currConfig_dt$Class[order(currConfig_dt[[currPlotCol_v]])]
+  
+  ### Subset data
+  currFunc_lsdt <- sapply(names(subFunc_lsdt), function(x) {
+    y <- subFunc_lsdt[[x]]
+    yy <- y[Class %in% currLevels_v,mget(c("Class", grep(paste(currFuncMarkers_v, collapse = "|"), colnames(y), value = T)))]
+    yy$timepoint <- subMeta_dt[Slide == x,timepoint]
+    return(yy)
+  }, simplify = F, USE.NAMES = T)
+  
+  ### Combine
+  currFunc_dt <- do.call(rbind, currFunc_lsdt)
+  setkey(currFunc_dt, "timepoint")
+  
+  ### Melt
+  currMelt_dt <- melt(currFunc_dt, id.vars = c("Class", "timepoint"))
+  
+  ### Subset colors
+  #currColor_dt <- color_dt[Population %in% currConfig_dt$Class,]
+  
+  ### Order output
+  #currMelt_dt$variable <- factor(currMelt_dt$variable, levels = currLevels_v)
+  
+  ### Colors
+  currMelt_dt$variable <- gsub("_func", "", currMelt_dt$variable)
+  currColor_dt <- color_dt; currColor_dt[1,1] <- currColor_dt[1,1]
+  currColor_dt$Population <- gsub("\\+", "", currColor_dt$Population)
+  currColor_dt <- currColor_dt[Population %in% unique(currMelt_dt$variable),]
+  
+  ### Make plot
+  curr_gg <- ggplot(data = currMelt_dt, aes(x = Class, y = value, fill = variable)) +
+    geom_bar(stat = "identity", position = "stack") + my_theme() + facet_wrap(~timepoint) + angle_x() +
+    scale_fill_manual(values = currColor_dt$Hex, breaks = currColor_dt$Population) +
+    ggtitle(currPlotName_v) + labs(y = bquote('Marker Density (cells / mm'^2*')'),
+                                   fill = "Functional Marker",
+                                   x = "Cell Type")
+  
+  ### Make table
+  round_dt <- round(currFunc_dt[,mget(setdiff(colnames(currFunc_dt), c("Class", "timepoint")))], digits = 2)
+  round_dt <- cbind(currFunc_dt[,mget(c("Class", "timepoint"))], round_dt)
+  display_grob <- tableGrob(round_dt, rows = NULL, theme = ttheme_default())
+  
+  ### Output
+  #grid.arrange(grobs = list(display_grob, curr_gg), nrow = 2)
+  
+  grid.arrange(grobs = list(display_grob, curr_gg), ncol = 2)
+  
+}
+```
+
+# Sunburst
+
+```{r makeSunburst, results='asis', echo = F}
+#```{r, makeSunburst, echo = F, fig.height= 7, eval = T}
+#plotCols_lsv$sunburst <- plotCols_lsv$sunburst[1:2]
+
+full_lsls <- htmltools::tagList()
+table_lsdt <- list()
+
+for (i in 1:length(plotCols_lsv$sunburst)) {
+  
+  ### Get current column and name
+  currPlotCol_v <- plotCols_lsv$sunburst[i]
+  currPlotName_v <- simpleCap(gsub("\\.", " ", gsub("^.*_", "", currPlotCol_v)))
+  
+  ### Subset config and wrangle to get levels and match
+  currConfig_dt <- config_dt[!is.na(get(currPlotCol_v)),mget(c("Class", currPlotCol_v))]
+  currConfig_dt <- currConfig_dt[get(currPlotCol_v) != "",]
+  currConfig_dt$Level <- as.numeric(gsub("[A-Z]*", "", currConfig_dt[[currPlotCol_v]]))
+  currConfig_dt$Match <- gsub("[0-9]*", "", currConfig_dt[[currPlotCol_v]])
+  currLevels_v <- unique(currConfig_dt$Level)
+  
+  ### Subset data columns and merge metadata
+  currData_dt <- merge(subMeta_dt[,mget(c("Slide", "timepoint"))],
+                       subCell_dt[,mget(c("Slide", currConfig_dt$Class))], 
+                       by.x = "Slide", by.y = "Slide", sort = F)
+  setkey(currData_dt, "timepoint") # sort by timepoint
+  
+  ### Transpose
+  currForSData_dt <- myT(currData_dt[,mget(c("timepoint", currConfig_dt$Class))], newName_v = "Class")
+  
+  ### Have to wrangle for each timepoint individually
+  currSData_lsdt <- list()
+  
+  for (j in 2:ncol(currForSData_dt)) {
+    
+    ### Subset class and current timepoint
+    currName_v <- colnames(currForSData_dt)[j]
+    curr_dt <- currForSData_dt[,c(1,j),with=F]
+    
+    ### Build base
+    currSData_dt <- curr_dt[Class %in% currConfig_dt[Level == 1,Class]]
+    currSData_dt$Parent <- NA
+    currSData_dt$ID <- currSData_dt$Class
+    
+    ### For each subsequent level, grab parents, labels, etc. and then bind to initial table
+    for (k in 2:length(currLevels_v)) {
+      lvl_v <- currLevels_v[k]
+      currNext_dt <- curr_dt[Class %in% currConfig_dt[Level == lvl_v,Class],]
+      currNext_dt$Parent <- sapply(currNext_dt$Class, function(x) {
+        m_v <- currConfig_dt[Class == x,Match]
+        p_v <- currConfig_dt[Match == m_v & Level <= (lvl_v-1),Class]
+        if (length(p_v) > 1) p_v <- paste(p_v, collapse = " - ")
+        return(p_v)
+      })
+      currNext_dt$ID <- paste(currNext_dt$Parent, currNext_dt$Class, sep = " - ")
+      currSData_dt <- rbind(currSData_dt, currNext_dt)
+    } # for k
+    
+    ### Add column to map colors
+    temp <- sapply(currSData_dt$Class, function(x) grep("KI67\\+|GRZB\\+|PD1\\+|CD163\\+|PDL1\\+", strsplit(x, split = " ")[[1]], 
+                                                        value = T)[1], simplify = F)
+    currSData_dt$colorMap <- sapply(temp, function(x) {if (length(x) == 0 | is.na(x)) { "" } else { x }})
+    currSData_dt[colorMap == "", colorMap := Class]
+    
+    ### Add colors
+    currSData_dt <- merge(currSData_dt, color_dt[,mget(c("Population", "Hex"))],
+                          by.x = "colorMap", by.y = "Population", sort = F)
+    
+    ### Escape special char
+    #currSData_dt$ID <- gsub("PD1\\-", "PD1\\\\\\-", currSData_dt$ID)
+    
+    ### Add to overal lsit
+    currSData_lsdt[[currName_v]] <- currSData_dt
+    
+  } # for j
+  
+  ### Make plots
+  currPlots_lspt <- sapply(names(currSData_lsdt), function(x) {
+    plot_ly(data = currSData_lsdt[[x]], ids = ~ID, labels = ~Class, parents = ~Parent, marker = list(colors = ~Hex),
+            values = as.formula(paste0("~", x)), type = "sunburst", branchvalues = "total") %>%
+      layout(title = x)
+  }, simplify = F, USE.NAMES = T)
+  
+  ### Make display tables
+  temp_lsdt <- currSData_lsdt
+  temp_lsdt <- sapply(temp_lsdt, function(x) {
+    parents_v <- x[is.na(Parent),Class]
+    newOrder_v <- unlist(sapply(parents_v, function(y) {
+      grep(y, x$Class, fixed = T, value = T)
+    }, simplify = F), use.names = F)
+    out <- x[match(newOrder_v, x$Class)]
+    out$colorMap <- NULL
+    out$Parent <- NULL
+    out$ID <- NULL
+    out$Hex <- NULL
+    return(out)
+  }, simplify = F)
+  
+  if (length(temp_lsdt) == 1) {
+    temp_dt <- temp_lsdt[[1]]
+  } else {
+    temp_dt <- mergeDTs(temp_lsdt, mergeCol_v = "Class")
+  }
+
+  ### Round
+  cols_v <- setdiff(colnames(temp_dt), "Class")
+  temp_dt[, (cols_v) := lapply(.SD, function(x) round(x, digits = 2)), .SDcols = cols_v]
+
+  table_lsdt[[currPlotName_v]] <- temp_dt
+  
+  ### Wrap in tag list
+  currPlots_lspt <- htmltools::tagList(currPlots_lspt)
+  
+  ### Add to other tag list
+  full_lsls[[currPlotName_v]] <- currPlots_lspt
+  
+}
+
+
+full_lsls
+```
+
+```{r, echo = F, results='asis', eval = T}
+
+for (i in 1:length(table_lsdt)) {
+  grid::grid.newpage()
+  grid::grid.draw(tableGrob(table_lsdt[[i]], rows = NULL, theme = ttheme_default()))
+  cat("\n\n\n")
+}
+
+ 
+```
