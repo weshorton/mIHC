@@ -63,4 +63,6 @@ Either run directly on the command line, or (recommended) make a quick bash scri
 
 ## Running Reports
 
+Usually we want to run one report per sample and that report can have one to many entries for that sample. Some projects will only have one entry per sample, in which case we will want to run a cohort report instead.  
+
 
