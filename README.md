@@ -53,7 +53,7 @@ Either run directly on the command line, or (recommended) make a quick bash scri
 ### Outputs of wrangleCounts.R
 
 1. Throws  warnings if any of the populations or samples are mis-matched between the various input files
-1. Updates metadata column to contain standard columns **overwrites input metadata file**
+1. Updates metadata column to contain standard columns **saves original input metadata file as 'origMeta' and overwites input file with updated**
 1. Converts count data to density
 1. Averages both count and density data by ROI  
 	+ **writes output: paste0(name_v, "\_slideAvg\_cell[Count/Density].csv")** 

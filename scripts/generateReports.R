@@ -43,7 +43,7 @@ optlist <- list(
   make_option(
     c("-i", "--idCol"),
     type = "character",
-    help = "Column name from metadata file that separates samples."
+    help = "Column name from metadata file that separates samples. AMTEC - Slide"
   ),
   make_option(
     c("-n", "--name"),
