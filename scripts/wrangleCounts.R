@@ -1,3 +1,5 @@
+#!/usr/local/bin/Rscript
+
 #########################
 ### WRANGLE MIHC DATA ###
 #########################
@@ -72,7 +74,7 @@ optlist <- list(
     help = "Column name to set unique sample identity for aggregation. So far have seen 'Sample_ID' for amtec, 'Tumor' for Zar, and 'Sample_ID' for Mdr01"
   ),
   make_option(
-   c("-s", "--sampleCol") ,
+   c("--sampleCol") ,
    type = "character",
    default = "Sample_ID",
    help = "Column name to use for sample IDs for aggregation in averageROIs"
@@ -121,7 +123,7 @@ optlist <- list(
 
 ### Parse command line
 p <- OptionParser(usage = "%proj -b baseDir -d dataDir -F funcDir -f dataFile -m metaFile -c colorFile -g gatingFile -n name -u uniqueCol
-                  -s sampleCol -S splitCol -l splitLabs -B by -G getCols -M mergeCol -e excludeCols",
+                  --sampleCol -S splitCol -l splitLabs -B by -G getCols -M mergeCol -e excludeCols",
                   option_list = optlist)
 args <- parse_args(p)
 opt <- args$options
@@ -151,16 +153,16 @@ if (!is.null(excludeCols_v)) excludeCols_v <- splitComma(excludeCols_v)
 
 ### Handle alternative arguments for file names.
 dataFile_v <- ifelse(file.exists(dataFile_v), dataFile_v,
-                     file.path(baseDir_v, paste0(name_v, args$dataFile)))
+                     file.path(dataDir_v, paste0(name_v, args$dataFile)))
 
 metaFile_v <- ifelse(file.exists(metaFile_v), metaFile_v,
-                     file.path(baseDir_v, paste0(name_v, args$metaFile)))
+                     file.path(dataDir_v, paste0(name_v, args$metaFile)))
 
 colorFile_v <- ifelse(file.exists(colorFile_v), colorFile_v,
-                     file.path(baseDir_v, paste0(name_v, args$colorFile)))
+                     file.path(dataDir_v, paste0(name_v, args$colorFile)))
 
 gatingFile_v <- ifelse(file.exists(gatingFile_v), gatingFile_v,
-                     file.path(baseDir_v, paste0(name_v, args$gatingFile)))
+                     file.path(dataDir_v, paste0(name_v, args$gatingFile)))
 
 
 ###
@@ -186,13 +188,15 @@ metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
 colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
 gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
 funcDir_v <- "CSV/FunctionalCounts_CSV"
-name_v <- "AMTEC2023March_"
-uniqCol_v <- "Sample_ID"
+name_v <- "AMTEC2023March_V2"
+uniqCol_v <- "Slide"
 sampleCol_v <- "Sample_ID"
 splitCol_v <- "ROI"
-splitLabs_v <- c("Tumor_ID", "ROI")
-by_v <- "Sample_ID"
-getCols_v <- c("Sample_ID", "Tumor_ID")
+splitLabs_v <- c("Slide", "ROI")
+# by_v <- "Sample_ID"
+by_v <- "Slide"
+# getCols_v <- c("Sample_ID", "Tumor_ID")
+getCols_v <- c("Sample_ID", "Slide")
 excludeCols_v <- NULL
 mergeCol_v <- "Sample_ID"
 
@@ -277,9 +281,12 @@ invisible(sapply(names(missingSamples_lsv), function(x) {
 gatingPops_v <- gate_dt[Class != "Functional", Class]
 gatingFxnl_v <- gsub("^Areap_|p$", "", gate_dt[Class == "Functional", Gate])
 
+### Color populations
+colorPops_v <- colors_dt$Population
+
 ### Check Gating against colors
-missingColorPops_v <- setdiff(gatingPops_v, colors_dt$Population)
-missingColorFxnl_v <- setdiff(gatingFxnl_v, colors_dt$Population)
+missingColorPops_v <- setdiff(gatingPops_v, colorPops_v)
+missingColorFxnl_v <- setdiff(gatingFxnl_v, colorPops_v)
 
 if (length(missingColorPops_v) > 0) {
   warning(sprintf("Missing %s pops in color file:\n%s\n", 
@@ -359,11 +366,11 @@ colnames(avgCount_dt)[which(colnames(avgCount_dt) == "Ki67+ Tumor Cells")] <- "K
 ###
 
 write.table(avgDens_dt,
-            file = file.path(dataDir_v, paste0(name_v, "_slideAvg_cellDensity.csv")),
+            file = file.path(dataDir_v, paste0(gsub("_$", "", name_v), "_slideAvg_cellDensity.csv")),
             sep = ",", quote = F, row.names = F)
 
 write.table(avgCount_dt,
-            file = file.path(dataDir_v, paste0(name_v, "_slideAvg_cellCount.csv")),
+            file = file.path(dataDir_v, paste0(gsub("_$", "", name_v), "_slideAvg_cellCount.csv")),
             sep = ",", quote = F, row.names = F)
 
 
@@ -410,7 +417,8 @@ functionalDensity_lsdt <- sapply(names(functional_lsdt), function(x) {
 ###
 
 ### Get unique IDs to average (slide is original, added Tumor for Zar)
-uniq_v <- avgDens_dt[[uniqCol_v]]
+#uniq_v <- avgDens_dt[[uniqCol_v]]
+uniq_v <- unique(meta_dt[[uniqCol_v]])
 
 ### Average density for each
 avgFD_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functionalDensity_lsdt, id_v = x, col_v = "Class"),
@@ -424,5 +432,5 @@ avgF_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functional_lsdt, i
 ### Write out average counts and densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
 
-myOpenXWriteWkbk(data_ls = avgFD_lsdt, file_v = file.path(dataDir_v, paste0(name_v, "_slideAvg_funcDensity.xlsx")))
-myOpenXWriteWkbk(data_ls = avgF_lsdt, file_v = file.path(dataDir_v, paste0(name_v, "_slideAvg_funcCount.xlsx")))
+myOpenXWriteWkbk(data_ls = avgFD_lsdt, file_v = file.path(dataDir_v, paste0(gsub("_$", "", name_v), "_slideAvg_funcDensity.xlsx")))
+myOpenXWriteWkbk(data_ls = avgF_lsdt, file_v = file.path(dataDir_v, paste0(gsub("_$", "", name_v), "_slideAvg_funcCount.xlsx")))

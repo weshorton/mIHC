@@ -15,6 +15,80 @@ params:
   configFile: "empty"
 ---
 
+```{r loadFxn, echo = F}
+tempMergeDTs <- function(data_lsdt, mergeCol_v, keepCol_v = NULL, ...) {
+  #' Merge many data.tables together
+  #' @description Take many data.tables and merge on and ID column, extracting a single column from each data.table as the column of interest
+  #' @param data_lsdt list of data.tables to merge
+  #' @param mergeCol_v which column from all of the data.tables to use to merge
+  #' @param keepCol_v which column from all of the data.tables to use as the column of interest. If NULL, use all columns
+  #' @param ... extra parameters passed to merge
+  #' @return data.table with ncol == length(data_lsdt) + 1. Column names are names of list, or defaults to V1, V2,...
+  #' @export
+  
+  ## Grab extra arguments
+  extraParams_lsv <- list(...)
+  
+  ## Handle extra arguments
+  if (!is.null(extraParams_lsv$all)){
+    all_v <- extraParams_lsv$all
+  } else {
+    all_v <- T
+  } # fi
+  
+  if (!is.null(extraParams_lsv$sort)){
+    sort_v <- extraParams_lsv$sort
+  } else {
+    sort_v <- F
+  } # fi
+  
+  ## If keepCol_v is NULL, grab all other columns
+    if (is.null(keepCol_v)){
+    keepCol_v <- colnames(data_lsdt[[1]])[-which(colnames(data_lsdt[[1]]) %in% mergeCol_v)]
+  } # fi
+  
+  ## Create initial table by extracting the 2 columns of interest from the rest
+  merge_dt <- data_lsdt[[1]][,mget(c(mergeCol_v, keepCol_v))]
+
+  ## Create initial column names (first check if list has names and add if not)
+  if (is.null(names(data_lsdt))) {
+    names_v <- paste("V", 1:length(data_lsdt))
+    names(data_lsdt) <- names_v
+  } # fi
+  
+  if (length(keepCol_v) > 1){
+    colNames_v <- c(mergeCol_v, paste(names(data_lsdt)[1], keepCol_v, sep = "_"))
+  } else {
+    colNames_v <- c(mergeCol_v, names(data_lsdt)[1])
+  } # fi
+  
+  for (i in 2:length(data_lsdt)) {
+    
+    ## This is new (2018-10-10) - need to make new keepCol_v if the data.tables don't have same columns
+    if (!keepCol_v %in% colnames(data_lsdt[[i]])) {
+      keepCol_v <- colnames(data_lsdt[[i]])[-which(colnames(data_lsdt[[i]]) %in% mergeCol_v)]
+    } # fi
+    
+    ## Merge
+    merge_dt <- merge(merge_dt,
+                      data_lsdt[[i]][,mget(c(mergeCol_v, keepCol_v))],
+                      by = mergeCol_v,
+                      all = all_v, sort = sort_v)
+    ## Update column names
+    if (length(keepCol_v) > 1){
+      colNames_v <- c(colNames_v, paste(names(data_lsdt)[i], keepCol_v, sep = "_"))
+    } else {
+      colNames_v <- c(colNames_v, names(data_lsdt)[i])
+    } # fi
+    
+    ## Rename columns
+    colnames(merge_dt) <- colNames_v
+  } # for i
+  return(merge_dt)
+} # mergeDTs
+
+```
+
 ```{r libraries, echo = F, message=F, warning=FALSE}
 library(readxl)
 library(data.table)
@@ -25,7 +99,7 @@ library(gridExtra)
 library(plotly)
 library(tools)
 library(kableExtra)
-source("~/my_tool_repos/mIHC/fxns.R")
+library(mIHC)
 
 ```
 
@@ -40,34 +114,14 @@ meta_dt <- readCSVOrExcel(params$metaFile)
 color_dt <- readCSVOrExcel(params$colorFile)
 config_dt <- readCSVOrExcel(params$configFile)
 
-### For testing
-# pt_v <- 12
-# proj_v <- "AMTEC2023_V3"
-# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_ptAvg_cellDensity.csv")
-# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_ptAvg_funcDensity.xlsx")
-# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_metadata.xlsx")
-# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_colorcodes.xlsx")
-# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/data/AMTEC2023_V3_gatingConfig.csv")
-
-### Clean test
-# pt_v <- 12
-# pt_v <- 23
-# pt_v <- 19
-# proj_v <- "AMTEC2023_V5"
-# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_slideAvg_cellDensity.csv")
-# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_slideAvg_funcDensity.xlsx")
-# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_metadata.xlsx")
-# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_colorcodes.xlsx")
-# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/samExampleStuff/cleanTest/data/AMTEC2023_V5_gatingConfig.csv")
-
-### AMTECRESTAIN TEST
-# pt_v <- 133
-# proj_v <- "AMTEC2023March_V2"
-# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_slideAvg_cellDensity.csv")
-# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_slideAvg_funcDensity.xlsx")
-# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_metadata.xlsx")
-# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_colorcodes.xlsx")
-# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/AMTECrestain/data/AMTEC2023March_V2_gatingConfig.csv")
+### New Test
+# pt_v <- 137
+# prj_v <- "AMTEC2023March_V2"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_gatingConfig.csv")
 
 
 ### Make sure patients are characters
@@ -76,7 +130,7 @@ cell_dt$Slide <- as.character(cell_dt$Slide)
 meta_dt$timepoint <- as.character(meta_dt$timepoint)
 ```
 
-```{r temporaryColorStuff, echo = F}
+```{r temporaryColorStuff, echo = F, eval = F}
 ### Still determining colors to use for functional markers. Right now they're some random colors I picked, but they don't get used.
 ### Sam is using default colors in the reports. I want to assign the colors (and in the future use special colors), but for consistency
 ### right now, I'll just assign the previously-assigned default colors.
@@ -115,7 +169,7 @@ if (nrow(subMeta_dt) > 1) {
   cat(sprintf("There are %s entries for this patient.\n", nrow(subMeta_dt)))
 } else {
   multi_v <- F
-  cat(sprintf("There are %s entries for this patient.\n", nrow(subMeta_dt)))
+  cat("There is 1 entry for this patient.\n")
 }
 
 ### Get plots - not sure which way to do this
@@ -214,7 +268,7 @@ for (i in 1:length(plotCols_lsv$pie)) {
   ### Make plot
   curr_lsgg <- lapply(unique(currMelt_dt$timepoint), function(x) {
     plot_gg <- ggplot(data = currMelt_dt[timepoint == x,], aes(x = timepoint, y = value, fill = variable)) +
-      geom_bar(width = 1, stat = "identity") + pie_theme +
+      geom_bar(width = 1, stat = "identity") + pie_theme() +
       coord_polar(theta = "y", start = 0) +
       scale_fill_manual(values = currColor_dt$Hex, breaks = currColor_dt$Population) +
       ggtitle(x)
@@ -372,6 +426,15 @@ for (i in 1:length(plotCols_lsv$sunburst)) {
     temp <- sapply(currSData_dt$Class, function(x) grep("KI67\\+|GRZB\\+|PD1\\+|CD163\\+|PDL1\\+", strsplit(x, split = " ")[[1]], 
                                                         value = T)[1], simplify = F)
     currSData_dt$colorMap <- sapply(temp, function(x) {if (length(x) == 0 | is.na(x)) { "" } else { x }})
+    
+    ### CHECK THIS! 
+    ### Originally had functional markers as [marker]+, but now have them as just [marker].
+    ### Some populations are called [marker]+ Cell Pop. and we remove the end to get [marker]+.
+    ### We need to remove the + at the end so it matches. Is this the best way to do this, should
+    ### we just put the + back in the color file?
+    currSData_dt$colorMap <- gsub("\\+$", "", currSData_dt$colorMap)
+    
+    ### Change others to their class
     currSData_dt[colorMap == "", colorMap := Class]
     
     ### Add colors
@@ -411,7 +474,7 @@ for (i in 1:length(plotCols_lsv$sunburst)) {
   if (length(temp_lsdt) == 1) {
     temp_dt <- temp_lsdt[[1]]
   } else {
-    temp_dt <- mergeDTs(temp_lsdt, mergeCol_v = "Class")
+    temp_dt <- tempMergeDTs(temp_lsdt, mergeCol_v = "Class")
   }
 
   ### Round

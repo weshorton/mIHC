@@ -1,3 +1,5 @@
+#!/usr/local/bin/Rscript
+
 ########################
 ### GENERATE REPORTS ###
 ########################
@@ -68,15 +70,23 @@ opt <- args$options
 ### Assign to variables
 baseDir_v <- args$baseDir
 inDir_v <- file.path(baseDir_v, args$dataDir)
-outDir_v <- file.path(baseDir_v, args$funcDir)
+outDir_v <- mkdir(baseDir_v, args$outDir)
 idCol_v <- args$idCol
 name_v <- args$name
 markdown_v <- args$markdown
 
+### Testing
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
+# inDir_v <- file.path(baseDir_v, "data")
+# outDir_v <- mkdir(baseDir_v, "reports")
+# name_v <- "AMTEC2023March_V2"
+# idCol_v <- "AMTEC ID"
+# markdown_v <- "~/my_tool_repos/mIHC/scripts/mIHC_Report.Rmd"
+
 ### Expand file paths
 cellDensityFile_v <- file.path(inDir_v, paste0(name_v, "_slideAvg_cellDensity.csv"))
 funcDensityFile_v <- file.path(inDir_v, paste0(name_v, "_slideAvg_funcDensity.xlsx"))
-metaFile_v <- file.path(inDir_v, paste0(gsub("_V[0-9]", "", name_v), "_metadata.xlsx"))
+metaFile_v <- file.path(inDir_v, paste0(name_v, "_metadata.xlsx"))
 colorFile_v <- file.path(inDir_v, paste0(name_v, "_colorcodes.xlsx"))
 configFile_v <- file.path(inDir_v, paste0(name_v, "_gatingConfig.csv"))
 
