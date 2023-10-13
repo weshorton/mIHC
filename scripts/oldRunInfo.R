@@ -125,3 +125,108 @@
 ### 5. Make sure the location of mIHC_Report.Rmd is correct
 
 ### 6. Run.
+
+
+###
+### New Test Stuff ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+###
+
+###
+### Generate Reports
+###
+
+### Testing
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/"
+# inDir_v <- file.path(baseDir_v, "data")
+# outDir_v <- mkdir(baseDir_v, "reports")
+# name_v <- "MdR01"
+# cohort_v <- F
+# uniqCol_v <- "Tumor_ID"
+# origMetaCols_v <- 'Tumor_ID'
+# idCol_v <- "origTumorID"
+# markdown_v <- "~/my_tool_repos/mIHC/scripts/mIHC_Report.Rmd" 
+
+###
+### mIHC_Report.Rmd
+###
+
+### New Test
+# pt_v <- 137
+# prj_v <- "AMTEC2023March_V2"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC//data/AMTEC2023March_V2_gatingConfig.csv")
+# idCol_v <- "AMTEC ID"
+# uniqCol_v <- "Slide"
+# metaCols_v <- strsplit('Slide,AMTEC ID,timepoint', split = ",")[[1]]
+
+### New Zar Test
+# pt_v <- NULL
+# prj_v <- "ZarCellDeath2023"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_gatingConfig.csv")
+# idCol_v <- "Tumor"
+# uniqCol_v <- "Tumor"
+# metaCols_v <- strsplit('Tumor', split = ",")[[1]]
+
+### New MdR01 Test
+# pt_v <- "L12"
+# prj_v <- "MdR01"
+# cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/data/MdR01_slideAvg_cellDensity.csv")
+# func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/data/MdR01_slideAvg_funcDensity.xlsx")
+# meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/data/MdR01_metadata.xlsx")
+# color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/data/MdR01_colorcodes.xlsx")
+# config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/data/MdR01_gatingConfig.csv")
+# idCol_v <- "origTumorID"
+# uniqCol_v <- "Tumor_ID"
+# metaCols_v <- strsplit('Tumor_ID', split = ",")[[1]]
+
+###
+### Wrangle Counts
+###
+
+### Testing
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/"
+# dataDir_v <- file.path(baseDir_v, "data")
+# dataFile_v <- file.path(dataDir_v, "MdR01_studycounts.csv")
+# metaFile_v <- file.path(dataDir_v, "MdR01_metadata.xlsx")
+# colorFile_v <- file.path(dataDir_v, "MdR01_colorcodes.xlsx")
+# gatingFile_v <- file.path(dataDir_v, "MdR01_gatingConfig.csv")
+# funcDir_v <- file.path(baseDir_v, "CSV/FunctionalCounts_CSV")
+# name_v <- "MdR01"
+# uniqCol_v <- "Sample_ID"
+# sampleCol_v <- "Sample_ID"
+# splitCol_v <- "ROI"
+# splitLabs_v <- c("Tumor_ID", "ROI")
+# by_v <- "Sample_ID"
+# getCols_v <- c("Sample_ID", "Tumor_ID")
+# mergeCol_v <- "Sample_ID"
+# excludeCols_v <- NULL
+# subByMeta_v <- F
+
+
+### Amtec Test
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
+# dataDir_v <- file.path(baseDir_v, "data")
+# dataFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_studycounts.csv")
+# metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
+# colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
+# gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
+# funcDir_v <- "CSV/FunctionalCounts_CSV"
+# name_v <- "AMTEC2023March_V2"
+# uniqCol_v <- "Slide"
+# sampleCol_v <- "Sample_ID"
+# splitCol_v <- "ROI"
+# splitLabs_v <- c("Slide", "ROI")
+# # by_v <- "Sample_ID"
+# by_v <- "Slide"
+# # getCols_v <- c("Sample_ID", "Tumor_ID")
+# getCols_v <- c("Sample_ID", "Slide")
+# excludeCols_v <- NULL
+# mergeCol_v <- "Sample_ID"
+

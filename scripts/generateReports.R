@@ -54,6 +54,22 @@ optlist <- list(
     The suffixes of these names are hardcoded within the script, but should be standardized after wrangleCounts run"
   ),
   make_option(
+    c("-c", "--cohort"),
+    type = "logical",
+    default = F,
+    help = "logical indicating if all samples should be run together or not."
+  ),
+  make_option(
+    c("-u", "--uniqCol"),
+    type = "character",
+    help = "Column name that specifies unique samples. Used for subsetting"
+  ),
+  make_option(
+    c("-M", "--metaCols"),
+    type = "character",
+    help = "Comma-sep no spaces list of columns from meta data that should be included in analysis."
+  ),
+  make_option(
     c("-m", "--markdown"),
     type = "character",
     default = "~/my_tool_repos/mIHC/scripts/mIHC_Report.Rmd",
@@ -62,7 +78,7 @@ optlist <- list(
 )
 
 ### Parse command line
-p <- OptionParser(usage = "%proj -b baseDir -d dataDir -o outDir -i idCol -n name -m markdown",
+p <- OptionParser(usage = "%proj -b baseDir -d dataDir -o outDir -i idCol -n name -c cohort -u uniqCol -M metaCols -m markdown",
                   option_list = optlist)
 args <- parse_args(p)
 opt <- args$options
@@ -73,15 +89,10 @@ inDir_v <- file.path(baseDir_v, args$dataDir)
 outDir_v <- mkdir(baseDir_v, args$outDir)
 idCol_v <- args$idCol
 name_v <- args$name
+cohort_v <- args$cohort
+uniqCol_v <- args$uniqCol
+origMetaCols_v <- args$metaCols
 markdown_v <- args$markdown
-
-### Testing
-# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
-# inDir_v <- file.path(baseDir_v, "data")
-# outDir_v <- mkdir(baseDir_v, "reports")
-# name_v <- "AMTEC2023March_V2"
-# idCol_v <- "AMTEC ID"
-# markdown_v <- "~/my_tool_repos/mIHC/scripts/mIHC_Report.Rmd"
 
 ### Expand file paths
 cellDensityFile_v <- file.path(inDir_v, paste0(name_v, "_slideAvg_cellDensity.csv"))
@@ -99,27 +110,45 @@ if (file_ext(metaFile_v) == "csv") {
   stop("Only csv and xlsx are supported for metaFile_v")
 }
 
-### Get samples
-samples_v <- unique(meta_dt[[idCol_v]])
-
-### TESTING!!!! subset samples for easier testing
-#samples_v <- samples_v[c(1,2,3)]
-
-### Generate report for each sample
-for (i in 1:length(samples_v)) {
+if (!cohort_v) {
   
-  ### Get sample
-  currSample_v <- samples_v[i]
+  ### Get samples
+  samples_v <- unique(meta_dt[[idCol_v]])
   
-  ### Run Markdown
+  ### Generate report for each sample
+  for (i in 1:length(samples_v)) {
+    
+    ### Get sample
+    currSample_v <- samples_v[i]
+    
+    ### Run Markdown
+    rmarkdown::render(markdown_v, 
+                      params = list(pt = currSample_v,
+                                    proj = name_v,
+                                    cellFile = cellDensityFile_v,
+                                    funcFile = funcDensityFile_v,
+                                    metaFile = metaFile_v,
+                                    colorFile = colorFile_v,
+                                    configFile = configFile_v,
+                                    idCol = idCol_v,
+                                    uniqCol = uniqCol_v,
+                                    metaCols = origMetaCols_v),
+                      output_file = file.path(outDir_v, paste0(name_v, "_", currSample_v, ".html")))
+  }
+
+} else {
+  
   rmarkdown::render(markdown_v, 
-                    params = list(pt = currSample_v,
+                    params = list(pt = NULL,
                                   proj = name_v,
                                   cellFile = cellDensityFile_v,
                                   funcFile = funcDensityFile_v,
                                   metaFile = metaFile_v,
                                   colorFile = colorFile_v,
-                                  configFile = configFile_v),
-                    output_file = file.path(outDir_v, paste0(name_v, "_", currSample_v, ".html")))
-}
-
+                                  configFile = configFile_v,
+                                  idCol = idCol_v,
+                                  uniqCol = uniqCol_v,
+                                  metaCols = origMetaCols_v),
+                    output_file = file.path(outDir_v, paste0(name_v, "_cohort.html")))
+  
+} # fi

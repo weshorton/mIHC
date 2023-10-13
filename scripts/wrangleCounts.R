@@ -118,12 +118,24 @@ optlist <- list(
     type = "character",
     default = NULL,
     help = "Comma-sep, no spaces string of meta.data columns that might be present in data that need to be ignored."
+  ),
+  make_option(
+    c("--metaCol"),
+    type = "character",
+    default = NULL,
+    help = "Used if subsetting functional data list by a different ID than its names. Used in Cell Death so far."
+  ),
+  make_option(
+    c("--subByMeta"),
+    type = "logical",
+    default = FALSE,
+    help = "Logical indicating whether or not to subset functional data list by a meta.data column instead of its names. Used in Cell Death so far"
   )
 )
 
 ### Parse command line
 p <- OptionParser(usage = "%proj -b baseDir -d dataDir -F funcDir -f dataFile -m metaFile -c colorFile -g gatingFile -n name -u uniqueCol
-                  --sampleCol -S splitCol -l splitLabs -B by -G getCols -M mergeCol -e excludeCols",
+                  --sampleCol -S splitCol -l splitLabs -B by -G getCols -M mergeCol -e excludeCols --metaCol --subByMeta",
                   option_list = optlist)
 args <- parse_args(p)
 opt <- args$options
@@ -145,6 +157,8 @@ by_v <- args$by
 getCols_v <- args$getCols
 mergeCol_v <- args$mergeCol
 excludeCols_v <- args$excludeCols
+metaCol_v <- args$metaCol
+subByMeta_v <- args$subByMeta
 
 ### Handle multiple column arguments
 if (!is.null(splitLabs_v)) splitLabs_v <- splitComma(splitLabs_v)
@@ -164,46 +178,30 @@ colorFile_v <- ifelse(file.exists(colorFile_v), colorFile_v,
 gatingFile_v <- ifelse(file.exists(gatingFile_v), gatingFile_v,
                      file.path(dataDir_v, paste0(name_v, args$gatingFile)))
 
-
-###
-### Study Counts ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###
-
-# ### Testing
-# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/MdR01/"
-# dataDir_v <- file.path(baseDir_v, "data")
-# dataFile_v <- file.path(dataDir_v, "MdR01_V1_studycounts.csv")
-# metaFile_v <- file.path(dataDir_v, "MdR01_Metadata.xlsx")
-# colorFile_v <- file.path(dataDir_v, "MdR01_colorcodes.xlsx")
-# gatingFile_v <- file.path(dataDir_v, "MdR01_gatingConfig.csv")
-# funcDir_v <- "CSVs/FunctionalCounts_CSV"
-# name_v <- "MdR01"
-# uniqCol_v <- "Sample_ID"
-
-### Amtec Test
-baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
-dataDir_v <- file.path(baseDir_v, "data")
-dataFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_studycounts.csv")
-metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
-colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
-gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
-funcDir_v <- "CSV/FunctionalCounts_CSV"
-name_v <- "AMTEC2023March_V2"
-uniqCol_v <- "Slide"
-sampleCol_v <- "Sample_ID"
-splitCol_v <- "ROI"
-splitLabs_v <- c("Slide", "ROI")
-# by_v <- "Sample_ID"
-by_v <- "Slide"
-# getCols_v <- c("Sample_ID", "Tumor_ID")
-getCols_v <- c("Sample_ID", "Slide")
-excludeCols_v <- NULL
-mergeCol_v <- "Sample_ID"
+### Print arguments
+cat(sprintf("Base dir: %s
+            data dir: %s
+            data file: %s
+            meta file: %s
+            color file: %s
+            gating file: %s
+            func dir: %s
+            name: %s
+            uniq col: %s
+            sample col: %s
+            split col: %s
+            split labs: %s
+            by = %s
+            get cols = %s
+            merge col = %s\n",
+            baseDir_v, dataDir_v, dataFile_v, metaFile_v, colorFile_v, gatingFile_v, funcDir_v, name_v, uniqCol_v, sampleCol_v, splitCol_v,
+            paste(splitLabs_v, collapse = "; "), by_v, paste(getCols_v, collapse = "; "), mergeCol_v))
 
 
 ###
 ### Load ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
+
 
 ### Read in data, meta, colors, and gating
 data_dt <- readCSVOrExcel(dataFile_v)
@@ -255,17 +253,18 @@ if (!"ROI" %in% colnames(meta_dt)) meta_dt[,ROI := gsub("^.*ROI0|^.*ROI|\\..*$",
 
 ### For MdR01 project, have to add new tumor ID and also remove meta.data sample ID file extension
 if (name_v == "MdR01") {
-  if (!"fullTumorID" %in% colnames(meta_dt)) {
-    meta_dt$fullTumorID <- meta_dt$`Tumor_ID`
-    colnames(meta_dt) <- gsub(" ", "_", colnames(meta_dt))
-    meta_dt[,Tumor_ID := gsub("T$|B$|L$|R$|-", "", Tumor_ID)]
-    meta_dt[, Sample_ID := gsub("\\..*$", "", Sample_ID)]
+  if (!"origTumorID" %in% colnames(meta_dt)) {
+    ### Save original id column
+    meta_dt$origTumorID <- meta_dt$`Tumor_ID`
+    ### Paste sub-region to make unique ID
+    meta_dt$Tumor_ID <- paste(meta_dt$Tumor_ID, meta_dt$Subregion, sep = "-")
   } # fi
 } # fi
 
 ###
 ### Check ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
+
 
 # Check sample names and pop IDs between files
 
@@ -320,6 +319,7 @@ if (file_ext(metaFile_v) == "csv") {
   writexl::write_xlsx(meta_dt, metaFile_v)
 } 
 
+
 ###
 ### Convert to Densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
@@ -361,6 +361,15 @@ avgCount_dt <- averageROIs(data_dt = data_dt,
 colnames(avgDens_dt)[which(colnames(avgDens_dt) == "Ki67+ Tumor Cells")] <- "KI67+ Tumor Cells"
 colnames(avgCount_dt)[which(colnames(avgCount_dt) == "Ki67+ Tumor Cells")] <- "KI67+ Tumor Cells"
 
+### For MdR01, map names back
+if (name_v == "MdR01") {
+  avgDens_dt[,Sample_ID := meta_dt[match(meta_dt$Sample_ID, Sample_ID), Tumor_ID]]
+  colnames(avgDens_dt)[colnames(avgDens_dt) == "Sample_ID"] <- "Tumor_ID"
+  avgCount_dt[,Sample_ID := meta_dt[match(meta_dt$Sample_ID, Sample_ID), Tumor_ID]]
+  colnames(avgCount_dt)[colnames(avgCount_dt) == "Sample_ID"] <- "Tumor_ID"
+}
+
+
 ###
 ### Write out average densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
@@ -383,7 +392,7 @@ write.table(avgCount_dt,
 ###
 
 ### Read in functional counts
-functional_lsdt <- readDir(dir_v = file.path(baseDir_v, funcDir_v), pattern_v = "*.csv")
+functional_lsdt <- readDir(dir_v = funcDir_v, pattern_v = "*.csv")
 
 ### Remove extra rowname column
 functional_lsdt <- sapply(functional_lsdt, function(x) {
@@ -400,9 +409,11 @@ functional_lsdt <- sapply(functional_lsdt, function(x) {
   return(x)
 }, simplify = F, USE.NAMES = T)
 
+
 ###
 ### Convert to Densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
+
 
 ### In order for this to work with calcDensity, have to make a dummy metadata dt with an area for
 ### each cell type as if they were patient IDs.
@@ -412,6 +423,7 @@ functionalDensity_lsdt <- sapply(names(functional_lsdt), function(x) {
   out <- calcDensity(data_dt = y, meta_dt = z, areaCol_v = "Area", idCol_v = "Class", metaCols_v = excludeCols_v)
 }, simplify = F)
 
+
 ###
 ### Average By Slide ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###
@@ -420,13 +432,28 @@ functionalDensity_lsdt <- sapply(names(functional_lsdt), function(x) {
 #uniq_v <- avgDens_dt[[uniqCol_v]]
 uniq_v <- unique(meta_dt[[uniqCol_v]])
 
+if (subByMeta_v) {
+  fMeta_dt <- meta_dt
+} else {
+  fMeta_dt <- NULL
+}
+
 ### Average density for each
-avgFD_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functionalDensity_lsdt, id_v = x, col_v = "Class"),
+avgFD_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functionalDensity_lsdt, id_v = x, col_v = "Class",
+                                                               meta_dt = fMeta_dt, metaCol_v = metaCol_v, sampleCol_v = sampleCol_v),
                     simplify = F, USE.NAMES = T)
 
+
 ### Average counts for each
-avgF_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functional_lsdt, id_v = x, col_v = "Class"),
+avgF_lsdt <- sapply(uniq_v, function(x) functionalAverageROIs(functional_lsdt, id_v = x, col_v = "Class",
+                                                              meta_dt = fMeta_dt, metaCol_v = metaCol_v, sampleCol_v = sampleCol_v),
                     simplify = F, USE.NAMES = T)
+
+### Map names back
+if (name_v == "MdR01") {
+  names(avgFD_lsdt) <- meta_dt[match(meta_dt$Sample_ID, names(avgFD_lsdt)),Tumor_ID]
+  names(avgF_lsdt) <- meta_dt[match(meta_dt$Sample_ID, names(avgF_lsdt)),Tumor_ID]
+}
 
 ###
 ### Write out average counts and densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
