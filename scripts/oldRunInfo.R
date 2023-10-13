@@ -230,3 +230,19 @@
 # excludeCols_v <- NULL
 # mergeCol_v <- "Sample_ID"
 
+
+
+
+### New new Wrangle test
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
+# dataDir_v <- file.path(baseDir_v, "data")
+# dataFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_studycounts.csv")
+# metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
+# colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
+# gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
+# funcDir_v <- "CSV/FunctionalCounts_CSV"
+# name_v <- "AMTEC2023March_V2"
+# excludeCols_v <- NULL
+# idCol_v <- "Sample_ID"
+# sampleCol_v <- "sampleName"

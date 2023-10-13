@@ -10,23 +10,10 @@ DIR="/Volumes/wrh_padlock3/projects/SS/newTests"
 ### AMTEC
 amtec="$WRANGLE \
 	--baseDir $DIR/AMTEC \
-	--dataDir data \
-	--funcDir CSV/FunctionalCounts_CSV \
-	--dataFile _studycounts.csv \
-	--metaFile _metadata.xlsx \
-	--colorFile _colorcodes.xlsx \
-	--gatingFile _gatingConfig.csv \
-	--name AMTEC2023March_V2 \
-	--uniqueCol Slide \
-	--sampleCol Sample_ID \
-	--splitCol ROI \
-	--splitLabs 'Slide,ROI' \
-	--by Slide \
-	--getCols 'Sample_ID,Slide' \
-	--mergeCol Sample_ID"
+	--name AMTEC2023March_V2"
 
-#echo $amtec
-#eval $amtec
+echo $amtec
+eval $amtec
 
 ### Cell Death
 cellDeath="$WRANGLE \
@@ -69,5 +56,5 @@ mdr01="$WRANGLE \
 	--getCols 'Sample_ID,Tumor_ID' \
 	--mergeCol Sample_ID"
 
-echo $mdr01
-eval $mdr01
+#echo $mdr01
+#eval $mdr01
