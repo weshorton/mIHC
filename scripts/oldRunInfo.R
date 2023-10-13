@@ -236,13 +236,22 @@
 ### New new Wrangle test
 
 # baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
-# dataDir_v <- file.path(baseDir_v, "data")
-# dataFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_studycounts.csv")
-# metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
-# colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
-# gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
-# funcDir_v <- "CSV/FunctionalCounts_CSV"
 # name_v <- "AMTEC2023March_V2"
-# excludeCols_v <- NULL
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/zar/"
+# name_v <- "ZarCellDeath2023"
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/"
+# name_v <- "MdR01"
+# 
+# dataDir_v <- file.path(baseDir_v, "data")
+# funcDir_v <- file.path(baseDir_v, "CSV/FunctionalCounts_CSV")
+# dataFile_v <- file.path(dataDir_v, paste0(name_v, "_studycounts.csv"))
+# metaFile_v <- file.path(dataDir_v, paste0(name_v, "_metadata.xlsx"))
+# colorFile_v <- file.path(dataDir_v, paste0(name_v, "_colorcodes.xlsx"))
+# gatingFile_v <- file.path(dataDir_v, paste0(name_v, "_gatingConfig.csv"))
 # idCol_v <- "Sample_ID"
 # sampleCol_v <- "sampleName"
+# excludeCols_v <- NULL
+# metaCol_v <- "sampleName"
+# subByMeta_v <- T

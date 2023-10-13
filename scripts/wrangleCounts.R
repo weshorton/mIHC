@@ -116,7 +116,7 @@ metaFile_v <- args$metaFile
 colorFile_v <- args$colorFile
 gatingFile_v <- args$gatingFile
 name_v <- args$name
-idCol_v <- args$uniqueCol
+idCol_v <- args$idCol
 sampleCol_v <- args$sampleCol
 excludeCols_v <- args$excludeCols
 metaCol_v <- args$metaCol
@@ -138,19 +138,6 @@ colorFile_v <- ifelse(file.exists(file.path(dataDir_v, colorFile_v)), file.path(
 gatingFile_v <- ifelse(file.exists(file.path(dataDir_v, gatingFile_v)), file.path(dataDir_v, gatingFile_v),
                      file.path(dataDir_v, paste0(name_v, args$gatingFile)))
 
-# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
-# dataDir_v <- file.path(baseDir_v, "data")
-# dataFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_studycounts.csv")
-# metaFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_metadata.xlsx")
-# colorFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_colorcodes.xlsx")
-# gatingFile_v <- file.path(dataDir_v, "AMTEC2023March_V2_gatingConfig.csv")
-# funcDir_v <- file.path(baseDir_v, "CSV/FunctionalCounts_CSV")
-# name_v <- "AMTEC2023March_V2"
-# excludeCols_v <- NULL
-# idCol_v <- "Sample_ID"
-# sampleCol_v <- "sampleName"
-# subByMeta_v <- F
-# metaCol_v <- NULL
 
 ###
 ### Load ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -276,7 +263,6 @@ functional_lsdt <- sapply(functional_lsdt, function(x) {
   colnames(x)[colnames(x) == "class"] <- "Class"
   return(x)
 }, simplify = F, USE.NAMES = T)
-
 
 ###
 ### Convert to Densities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
