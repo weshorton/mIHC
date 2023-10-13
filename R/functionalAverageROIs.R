@@ -5,6 +5,12 @@ functionalAverageROIs <- function(functional_lsdt, id_v, col_v = "class", meta_d
   #' @param functional_lsdt list of functional tables (either counts or density), one for each patient+timepoint+ROI
   #' @param id_v sample ID that will be averaged over.
   #' @param col_v column name in each functional data.table that is the identifier (i.e. not a functional value)
+  #' @param meta_dt associated metadata table that can be used for subsetting functional_lsdt
+  #' @param metaCol_v column from meta_dt to use for subsetting
+  #' @param sampleCol_v column from meta_dt whose values match names(functional_lsdt)
+  #' @details Given a list of functional data tables, subset in one of two ways and calculate averages.
+  #' Subset 1: grep(id_v, names(functional_lsdt)) 
+  #' Subset 2: meta_dt[get(metaCol_v) == id_v, get(sampleCol_v)]
   #' @return data.table containing the averaged results of id_v
   #' @export
 
