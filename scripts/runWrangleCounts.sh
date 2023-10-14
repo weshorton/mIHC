@@ -10,20 +10,7 @@ DIR="/Volumes/wrh_padlock3/projects/SS/newTests"
 ### AMTEC
 amtec="$WRANGLE \
 	--baseDir $DIR/AMTEC \
-	--dataDir data \
-	--funcDir CSV/FunctionalCounts_CSV \
-	--dataFile _studycounts.csv \
-	--metaFile _metadata.xlsx \
-	--colorFile _colorcodes.xlsx \
-	--gatingFile _gatingConfig.csv \
-	--name AMTEC2023March_V2 \
-	--uniqueCol Slide \
-	--sampleCol Sample_ID \
-	--splitCol ROI \
-	--splitLabs 'Slide,ROI' \
-	--by Slide \
-	--getCols 'Sample_ID,Slide' \
-	--mergeCol Sample_ID"
+	--name AMTEC2023March_V2"
 
 #echo $amtec
 #eval $amtec
@@ -31,20 +18,7 @@ amtec="$WRANGLE \
 ### Cell Death
 cellDeath="$WRANGLE \
 	--baseDir $DIR/zar \
-	--dataDir data \
-	--funcDir CSV/FunctionalCounts_CSV \
-	--dataFile _studycounts.csv \
-	--metaFile _metadata.xlsx \
-	--colorFile _colorcodes.xlsx \
-	--gatingFile _gatingConfig.csv \
 	--name ZarCellDeath2023 \
-	--uniqueCol Tumor \
-	--sampleCol Sample_ID \
-	--splitCol ROI \
-	--splitLabs 'Slide,Sample' \
-	--by Tumor \
-	--getCols 'Sample_ID,Tumor' \
-	--mergeCol Sample_ID \
 	--metaCol Tumor \
 	--subByMeta T"
 
@@ -54,20 +28,9 @@ cellDeath="$WRANGLE \
 ### MdR01 - orig version
 mdr01="$WRANGLE \
 	--baseDir $DIR/MdR01 \
-	--dataDir data \
-	--funcDir CSV/FunctionalCounts_CSV \
-	--dataFile _studycounts.csv \
-	--metaFile _metadata.xlsx \
-	--colorFile _colorcodes.xlsx \
-	--gatingFile _gatingConfig.csv \
 	--name MdR01 \
-	--uniqueCol Sample_ID \
-	--sampleCol Sample_ID \
-	--splitCol ROI \
-	--splitLabs 'Tumor_ID,ROI' \
-	--by Sample_ID \
-	--getCols 'Sample_ID,Tumor_ID' \
-	--mergeCol Sample_ID"
+	--metaCol sampleName
+	--subByMeta T"
 
 echo $mdr01
 eval $mdr01

@@ -230,3 +230,47 @@
 # excludeCols_v <- NULL
 # mergeCol_v <- "Sample_ID"
 
+
+
+
+### New new Wrangle test
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/AMTEC/"
+# name_v <- "AMTEC2023March_V2"
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/zar/"
+# name_v <- "ZarCellDeath2023"
+
+# baseDir_v <- "/Volumes/wrh_padlock3/projects/SS/newTests/MdR01/"
+# name_v <- "MdR01"
+# 
+# dataDir_v <- file.path(baseDir_v, "data")
+# funcDir_v <- file.path(baseDir_v, "CSV/FunctionalCounts_CSV")
+# dataFile_v <- file.path(dataDir_v, paste0(name_v, "_studycounts.csv"))
+# metaFile_v <- file.path(dataDir_v, paste0(name_v, "_metadata.xlsx"))
+# colorFile_v <- file.path(dataDir_v, paste0(name_v, "_colorcodes.xlsx"))
+# gatingFile_v <- file.path(dataDir_v, paste0(name_v, "_gatingConfig.csv"))
+# idCol_v <- "Sample_ID"
+# sampleCol_v <- "sampleName"
+# excludeCols_v <- NULL
+# metaCol_v <- "sampleName"
+# subByMeta_v <- T
+
+
+
+### New New report test
+
+### New Zar Test
+reportID_v <- "cohort"
+prj_v <- "ZarCellDeath2023"
+cell_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_slideAvg_cellDensity.csv")
+func_lsdt <- readAllExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_slideAvg_funcDensity.xlsx")
+meta_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_metadata.xlsx")
+color_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_colorcodes.xlsx")
+config_dt <- readCSVOrExcel("/Volumes/wrh_padlock3/projects/SS/newTests/zar/data/ZarCellDeath2023_gatingConfig.csv")
+
+
+### New stuff
+idCol_v <- "Sample_ID"
+sampleCol_v <- "sampleName"
+reportCol_v <- "reportID"
