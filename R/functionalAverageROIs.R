@@ -1,4 +1,4 @@
-functionalAverageROIs <- function(functional_lsdt, id_v, col_v = "class", meta_dt = NULL, metaCol_v = NULL, sampleCol_v = "Sample_ID") {
+functionalAverageROIs <- function(functional_lsdt, id_v, col_v = "Class", meta_dt = NULL, metaCol_v = NULL, sampleCol_v = "Sample_ID") {
   #' Average Functional ROIs
   #' @description
   #' Calculate average functional values for ROIs originating from same sample (i.e. patient+timepoint)
