@@ -6,16 +6,16 @@ output:
   html_document:
       css: doc.css
 params:
-  pt: "empty"
+  reportID: "empty"
   proj: "empty"
   cellFile: "empty"
   funcFile: "empty"
   metaFile: "empty"
   colorFile: "empty"
   configFile: "empty"
+  reportCol: "empty"
   idCol: "empty"
-  uniqCol: "empty"
-  metaCols: "empty"
+  sampleCol: "empty"
 ---
 
 ```{r loadFxn, echo = F}
@@ -111,79 +111,46 @@ library(mIHC)
 ```{r loadData, echo = F}
 
 ### Load data
-pt_v <- params$pt
+reportID_v <- params$reportID
 proj_v <- params$proj
+
 cell_dt <- readCSVOrExcel(params$cellFile)
 func_lsdt <- readAllExcel(params$funcFile)
 meta_dt <- readCSVOrExcel(params$metaFile)
 color_dt <- readCSVOrExcel(params$colorFile)
 config_dt <- readCSVOrExcel(params$configFile)
+
+reportCol_v <- params$reportCol
 idCol_v <- params$idCol
-uniqCol_v <- params$uniqCol
-metaCols_v <- strsplit(params$metaCols, split = ",")[[1]]
+sampleCol_v <- params$sampleCol
 
-### Make sure patients are characters
-meta_dt[[uniqCol_v]] <- as.character(meta_dt[[uniqCol_v]])
-cell_dt[[uniqCol_v]] <- as.character(cell_dt[[uniqCol_v]])
-
-if ("timepoint" %in% colnames(meta_dt)) {meta_dt$timepoint <- as.character(meta_dt$timepoint)}
-```
-
-```{r temporaryColorStuff, echo = F, eval = F}
-### Still determining colors to use for functional markers. Right now they're some random colors I picked, but they don't get used.
-### Sam is using default colors in the reports. I want to assign the colors (and in the future use special colors), but for consistency
-### right now, I'll just assign the previously-assigned default colors.
-color_dt[Population == "CD163+", Hex := "#F9756d"]
-color_dt[Population == "GRZB+", Hex := "#00Bf7D"]
-color_dt[Population == "KI67+", Hex := "#A3A602"]
-color_dt[Population == "PD1+", Hex := "#00AFF6"]
-color_dt[Population == "PDL1+", Hex := "#E76AF3"]
-color_dt[Population == "CCR2+", Hex := "#55BCC2"]
 ```
 
 ```{r wrangleData, echo = F}
 
-### Subset metadata for given sample and also subset columns
-### If no pt_v provided, then don't subset.
-if (!is.null(pt_v)) {
-  subMeta_dt <- unique(meta_dt[get(idCol_v) == pt_v,mget(metaCols_v)])
-} else {
-  subMeta_dt <- unique(meta_dt[,mget(metaCols_v)])
-}
-
-### This if for AMTEC only
-if ("timepoint" %in% colnames(subMeta_dt)) {
-  ### add bx to timepoint (for biopsy)
-  subMeta_dt$timepoint <- paste0("bx", subMeta_dt$timepoint)
-  
-  ### Make sure no duplicated timepoints
-  if (nrow(subMeta_dt[,.N,by=timepoint][N>1,]) > 0) stop("Check timepoint assignments. Should be unique at this level.")
-}
-
-### To avoid this hardcode, need to generalize the columns better...
-# if (prj_v == "MdR01") {
-#   subCell_dt <- subCell_dt[,Sample_ID := subMeta_dt[match(subMeta_dt$Sample_ID, Sample_ID),paste(Tumor_ID, Subregion, sep = "-")]]
-#   colnames(subCell_dt)[colnames(subCell_dt) == "Sample_ID"] <- "Tumor_ID"
-#   subMeta_dt[,Tumor_ID := paste(Tumor_ID, Subregion, sep = "-")]
-# }
+### Subset both data and metadata for the given report ID, if provided
+### Also subset meta.data columns
+if (!is.null(reportID_v)) {
+  subMeta_dt <- unique(meta_dt[get(reportCol_v) == reportID_v, mget(c("reportID", "facet", "sampleName"))])
+} 
 
 ### Subset data
-subCell_dt <- cell_dt[get(uniqCol_v) %in% subMeta_dt[[uniqCol_v]],]
-subFunc_lsdt <- func_lsdt[subMeta_dt[[uniqCol_v]]]
+subCell_dt <- cell_dt[get(sampleCol_v) %in% subMeta_dt[[sampleCol_v]],]
+subFunc_lsdt <- func_lsdt[subMeta_dt[[sampleCol_v]]]
 
 ### Check that they have same rows
 if (nrow(subMeta_dt) != nrow(subCell_dt)) stop("Unequal rows of cell data and meta. Check inputs.")
 if (nrow(subMeta_dt) != length(subFunc_lsdt)) stop("Unequal rows of functional data and meta. Check inputs.")
 
-### Check that unique column is the same
-metaClass_v <- class(subMeta_dt[[uniqCol_v]])
-dataClass_v <- class(subCell_dt[[uniqCol_v]])
+### Check that sample column is the same
+metaClass_v <- class(subMeta_dt[[sampleCol_v]])
+dataClass_v <- class(subCell_dt[[sampleCol_v]])
 
 if (metaClass_v != dataClass_v) {
   cat(sprintf("uniqCol: %s has mismatched classes.\n%s in meta\n%s in data.\nChanging both to character.\n",
-              uniqCol_v, metaClass_v, dataClass_v))
-  subMeta_dt[[uniqCol_v]] <- as.character(subMeta_dt[[uniqCol_v]])
-  subCell_dt[[uniqCol_v]] <- as.character(subCell_dt[[uniqCol_v]])
+              sampleCol_v, metaClass_v, dataClass_v))
+  subMeta_dt[[sampleCol_v]] <- as.character(subMeta_dt[[sampleCol_v]])
+  subCell_dt[[sampleCol_v]] <- as.character(subCell_dt[[sampleCol_v]])
 }
 
 ### Determine if multiple entries
@@ -197,9 +164,10 @@ if (nrow(subMeta_dt) > 1) {
   myKable(subMeta_dt)
 }
 
-### Get plots - not sure which way to do this
-#plotCols_v <- grep("stacked|pie|sunburst", colnames(config_dt), value = T)
+### Determine if faceting (can this be done better)
+facet_v <-  ifelse(length(which(is.na(subMeta_dt$facet))) == 0, T, F)
 
+### Get plots from config table
 plotCols_lsv <- list("stackedBar" = grep("[Ss]tacked[Bb]ar", colnames(config_dt), value = T),
                      "pie" = grep("[Pp]ie[Cc]hart", colnames(config_dt), value = T),
                      "sunburst" = grep("[Ss]unburst", colnames(config_dt), value = T),
@@ -225,17 +193,17 @@ if ("stackedBar" %in% names(plotCols_lsv)) {
     currLevels_v <- currConfig_dt$Class[order(currConfig_dt[[currPlotCol_v]])]
     
     ### Subset data columns and merge metadata
-    if ("timepoint" %in% colnames(subMeta_dt)) {
-      mergeCols_v <- c(uniqCol_v, "timepoint")
+    if (facet_v) {
+      mergeCols_v <- c(sampleCol_v, "facet")
     } else {
-      mergeCols_v <- uniqCol_v
+      mergeCols_v <- sampleCol_v
     }
     
     currData_dt <- merge(subMeta_dt[,mget(mergeCols_v)],
-                         subCell_dt[,mget(c(uniqCol_v, currConfig_dt$Class))], 
-                         by.x = uniqCol_v, by.y = uniqCol_v, sort = F)
+                         subCell_dt[,mget(c(sampleCol_v, currConfig_dt$Class))], 
+                         by = sampleCol_v, sort = F)
     
-    if ("timepoint" %in% colnames(subMeta_dt)) setkey(currData_dt, "timepoint") # sort by timepoint
+    #if (facet_v) setkey(currData_dt, "facet")
     
     ### Melt data
     currMelt_dt <- melt(currData_dt, id.vars = mergeCols_v)
@@ -250,7 +218,7 @@ if ("stackedBar" %in% names(plotCols_lsv)) {
     ### Make sure population levels match?
     
     ### Assign x variable
-    if ("timepoint" %in% colnames(subMeta_dt)) { x_v <- "timepoint" } else { x_v <- uniqCol_v}
+    if (facet_v) { x_v <- "facet" } else { x_v <- sampleCol_v}
     
     ### Make plot
     curr_gg <- ggplot(data = currMelt_dt, aes(x = !!sym(x_v), y = value, fill = variable)) +
@@ -267,7 +235,7 @@ if ("stackedBar" %in% names(plotCols_lsv)) {
     display_grob <- tableGrob(display_dt, rows = NULL, theme = ttheme_default(base_size = 16))
     
     ### Output
-    if (is.null(pt_v)) {
+    if (is.null(reportID_v)) {
       foo <- grid.arrange(grobs = list(display_grob, curr_gg), nrow = 2)
     } else {
       foo <- grid.arrange(grobs = list(display_grob, curr_gg), ncol = 2)
@@ -294,21 +262,21 @@ if ("pie" %in% names(plotCols_lsv)) {
   currLevels_v <- currConfig_dt$Class[order(currConfig_dt[[currPlotCol_v]])]
   
   ### Calculate percentages (and subset columns)
-  currData_df <- convertDFT(subCell_dt[,mget(c(uniqCol_v, currConfig_dt$Class))], col_v = uniqCol_v)
+  currData_df <- convertDFT(subCell_dt[,mget(c(sampleCol_v, currConfig_dt$Class))], col_v = sampleCol_v)
   currData_df <- currData_df / rowSums(currData_df) * 100
   
   ### Merge metadata
-    if ("timepoint" %in% colnames(subMeta_dt)) {
-    mergeCols_v <- c(uniqCol_v, "timepoint")
+  if (facet_v) {
+    mergeCols_v <- c(sampleCol_v, "facet")
   } else {
-    mergeCols_v <- uniqCol_v
+    mergeCols_v <- sampleCol_v
   }
   
   currData_dt <- merge(subMeta_dt[,mget(mergeCols_v)],
-                       convertDFT(currData_df, newName_v = uniqCol_v),
-                       by = uniqCol_v, sort = F)
+                       convertDFT(currData_df, newName_v = sampleCol_v),
+                       by = sampleCol_v, sort = F)
   
-  if ("timepoint" %in% colnames(subMeta_dt)) setkey(currData_dt, "timepoint")
+  if (facet_v) setkey(currData_dt, "facet")
   
   ### Melt
   currMelt_dt <- data.table::melt(currData_dt, id.vars = mergeCols_v)
@@ -320,8 +288,9 @@ if ("pie" %in% names(plotCols_lsv)) {
   currMelt_dt$variable <- factor(currMelt_dt$variable, levels = currLevels_v)
   
   ### Make plot
-  curr_lsgg <- lapply(unique(currMelt_dt$timepoint), function(x) {
-    plot_gg <- ggplot(data = currMelt_dt[timepoint == x,], aes(x = timepoint, y = value, fill = variable)) +
+  ### to do - non-facet option
+  curr_lsgg <- lapply(unique(currMelt_dt$facet), function(x) {
+    plot_gg <- ggplot(data = currMelt_dt[facet == x,], aes(x = facet, y = value, fill = variable)) +
       geom_bar(width = 1, stat = "identity") + pie_theme() +
       coord_polar(theta = "y", start = 0) +
       scale_fill_manual(values = currColor_dt$Hex, breaks = currColor_dt$Population) +
@@ -375,27 +344,26 @@ if ("bar" %in% names(plotCols_lsv)) {
   
   ### Subset data
   currFunc_lsdt <- sapply(names(subFunc_lsdt), function(x) {
+    
     y <- subFunc_lsdt[[x]]
     yy <- y[Class %in% currLevels_v,mget(c("Class", grep(paste(currFuncMarkers_v, collapse = "|"), colnames(y), value = T)))]
-    if ("timepoint" %in% colnames(subMeta_dt)) {
-      yy$timepoint <- subMeta_dt[get(uniqCol_v) == x,timepoint]
-    } else {
-      yy$key <- x
-    }
+    if (facet_v) yy$facet <- subMeta_dt[get(sampleCol_v) == x, "facet"]
     return(yy)
+    
   }, simplify = F, USE.NAMES = T)
   
   ### Combine
   currFunc_dt <- do.call(rbind, currFunc_lsdt)
-  if ("timepoint" %in% colnames(currFunc_dt)) {
-    setkey(currFunc_dt, "timepoint")
-  } else {
-    setkey(currFunc_dt, cols = "key")
-  }
   
-  ### Melt - this is ugly
-  if ("timepoint" %in% colnames(currFunc_dt)) { meltCols_v <- c("Class", "timepoint") } else { meltCols_v <- c("Class", "key")}
-  #if (prj_v == "MdR01") { meltCols_v <- c("Class", uniqCol_v) } else {meltCols_v <- "Class"}
+  if (facet_v) setkey(currFunc_dt, "facet")
+  
+  ### Melt
+  if (facet_v) {
+    meltCols_v <- c("Class", "facet")
+  } else {
+    #meltCols_v <- c("Class", sampleCol_v)
+    meltCols_v <- "Class"
+  }
   
   currMelt_dt <- melt(currFunc_dt, id.vars = meltCols_v)
 
@@ -415,13 +383,9 @@ if ("bar" %in% names(plotCols_lsv)) {
                                    x = "Cell Type")
   
   ### Add Facet
-  if ("timepoint" %in% colnames(subMeta_dt)) {
-    curr_gg <- curr_gg + facet_wrap(~timepoint)
-  } # fi
-  
-  if (prj_v == "MdR01") {
-    curr_gg <- curr_gg + facet_wrap(~key)
-  } # fi
+  if (facet_v) {
+    curr_gg <- curr_gg + facet_wrap(~facet)
+  }
   
   ### Make table
   round_dt <- round(currFunc_dt[,mget(setdiff(colnames(currFunc_dt), meltCols_v))], digits = 2)
@@ -463,13 +427,13 @@ if ("sunburst" %in% names(plotCols_lsv)) {
   currLevels_v <- unique(currConfig_dt$Level)
   
   ### Subset data columns and merge metadata
-  currData_dt <- merge(subMeta_dt[,mget(c("Slide", "timepoint"))],
-                       subCell_dt[,mget(c("Slide", currConfig_dt$Class))], 
-                       by.x = "Slide", by.y = "Slide", sort = F)
-  setkey(currData_dt, "timepoint") # sort by timepoint
+  currData_dt <- merge(subMeta_dt[,mget(c(sampleCol_v, "facet"))],
+                       subCell_dt[,mget(c(sampleCol_v, currConfig_dt$Class))], 
+                       by.x = sampleCol_v, by.y = sampleCol_v, sort = F)
+  setkey(currData_dt, "facet") # sort by timepoint
   
   ### Transpose
-  currForSData_dt <- myT(currData_dt[,mget(c("timepoint", currConfig_dt$Class))], newName_v = "Class")
+  currForSData_dt <- myT(currData_dt[,mget(c("facet", currConfig_dt$Class))], newName_v = "Class")
   
   ### Have to wrangle for each timepoint individually
   currSData_lsdt <- list()

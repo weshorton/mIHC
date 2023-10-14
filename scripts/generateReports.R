@@ -43,31 +43,28 @@ optlist <- list(
     help = "Relative path to the directory where reports will be output"
   ),
   make_option(
-    c("-i", "--idCol"),
-    type = "character",
-    help = "Column name from metadata file that separates samples. AMTEC - Slide"
-  ),
-  make_option(
     c("-n", "--name"),
     type = "character",
     help = "Project name. Used to load meta file, data files, gating file, etc. 
     The suffixes of these names are hardcoded within the script, but should be standardized after wrangleCounts run"
   ),
   make_option(
-    c("-c", "--cohort"),
-    type = "logical",
-    default = F,
-    help = "logical indicating if all samples should be run together or not."
+    c("-r", "--reportCol"),
+    type = "character",
+    default = "reportID",
+    help = "Column name from metadata file that separates which entries go into a report"
   ),
   make_option(
-    c("-u", "--uniqCol"),
+    c("-S", "--sampleCol"),
     type = "character",
+    default = "sampleName",
     help = "Column name that specifies unique samples. Used for subsetting"
   ),
   make_option(
-    c("-M", "--metaCols"),
+    c("-i", "--idCol"),
     type = "character",
-    help = "Comma-sep no spaces list of columns from meta data that should be included in analysis."
+    default = "Sample_ID",
+    help = "Not really used. Maps back to other files."
   ),
   make_option(
     c("-m", "--markdown"),
@@ -78,7 +75,7 @@ optlist <- list(
 )
 
 ### Parse command line
-p <- OptionParser(usage = "%proj -b baseDir -d dataDir -o outDir -i idCol -n name -c cohort -u uniqCol -M metaCols -m markdown",
+p <- OptionParser(usage = "%proj -b baseDir -d dataDir -o outDir -n name -r reportCol -S sampleCol -i idCol -m markdown",
                   option_list = optlist)
 args <- parse_args(p)
 opt <- args$options
@@ -87,11 +84,10 @@ opt <- args$options
 baseDir_v <- args$baseDir
 inDir_v <- file.path(baseDir_v, args$dataDir)
 outDir_v <- mkdir(baseDir_v, args$outDir)
-idCol_v <- args$idCol
 name_v <- args$name
-cohort_v <- args$cohort
-uniqCol_v <- args$uniqCol
-origMetaCols_v <- args$metaCols
+reportCol_v <- args$reportCol
+sampleCol_v <- args$sampleCol
+idCol_v <- args$idCol
 markdown_v <- args$markdown
 
 ### Expand file paths
@@ -110,45 +106,27 @@ if (file_ext(metaFile_v) == "csv") {
   stop("Only csv and xlsx are supported for metaFile_v")
 }
 
-if (!cohort_v) {
   
-  ### Get samples
-  samples_v <- unique(meta_dt[[idCol_v]])
-  
-  ### Generate report for each sample
-  for (i in 1:length(samples_v)) {
-    
-    ### Get sample
-    currSample_v <- samples_v[i]
-    
-    ### Run Markdown
-    rmarkdown::render(markdown_v, 
-                      params = list(pt = currSample_v,
-                                    proj = name_v,
-                                    cellFile = cellDensityFile_v,
-                                    funcFile = funcDensityFile_v,
-                                    metaFile = metaFile_v,
-                                    colorFile = colorFile_v,
-                                    configFile = configFile_v,
-                                    idCol = idCol_v,
-                                    uniqCol = uniqCol_v,
-                                    metaCols = origMetaCols_v),
-                      output_file = file.path(outDir_v, paste0(name_v, "_", currSample_v, ".html")))
-  }
+### Get samples
+samples_v <- unique(meta_dt[[reportCol_v]])
 
-} else {
+### Generate report for each sample
+for (i in 1:length(samples_v)) {
   
+  ### Get sample
+  currSample_v <- samples_v[i]
+  
+  ### Run Markdown
   rmarkdown::render(markdown_v, 
-                    params = list(pt = NULL,
+                    params = list(reportID = currSample_v,
                                   proj = name_v,
                                   cellFile = cellDensityFile_v,
                                   funcFile = funcDensityFile_v,
                                   metaFile = metaFile_v,
                                   colorFile = colorFile_v,
                                   configFile = configFile_v,
+                                  reportCol = reportCol_v,
                                   idCol = idCol_v,
-                                  uniqCol = uniqCol_v,
-                                  metaCols = origMetaCols_v),
-                    output_file = file.path(outDir_v, paste0(name_v, "_cohort.html")))
-  
-} # fi
+                                  sampleCol = sampleCol_v),
+                    output_file = file.path(outDir_v, paste0(name_v, "_", currSample_v, ".html")))
+}
