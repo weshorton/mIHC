@@ -4,6 +4,11 @@ author: "Wes Horton"
 date: "`r Sys.Date()`"
 output: 
   html_document:
+      code_folding: hide
+      toc: true
+      toc_depth: 3
+      toc_float: TRUE
+      number_sections: TRUE
       css: doc.css
 params:
   reportID: "empty"
@@ -215,10 +220,11 @@ if ("stackedBar" %in% names(plotCols_lsv)) {
     currMelt_dt$variable <- factor(currMelt_dt$variable, levels = currLevels_v)
     currColor_dt <- currColor_dt[match(currLevels_v, currColor_dt$Population)]
     
-    ### Make sure population levels match?
-    
     ### Assign x variable
     if (facet_v) { x_v <- "facet" } else { x_v <- sampleCol_v}
+    
+    ### Get length of x-axis
+    xLen_v <- length(unique(currMelt_dt[[x_v]]))
     
     ### Make plot
     curr_gg <- ggplot(data = currMelt_dt, aes(x = !!sym(x_v), y = value, fill = variable)) +
@@ -235,7 +241,7 @@ if ("stackedBar" %in% names(plotCols_lsv)) {
     display_grob <- tableGrob(display_dt, rows = NULL, theme = ttheme_default(base_size = 16))
     
     ### Output
-    if (is.null(reportID_v)) {
+    if (length(xLen_v > 5)) {
       foo <- grid.arrange(grobs = list(display_grob, curr_gg), nrow = 2)
     } else {
       foo <- grid.arrange(grobs = list(display_grob, curr_gg), ncol = 2)
@@ -463,7 +469,7 @@ if ("sunburst" %in% names(plotCols_lsv)) {
       currSData_dt <- rbind(currSData_dt, currNext_dt)
     } # for k
     
-    ### Add column to map colors
+    ### Add column to map colors - need a better way to do this
     temp <- sapply(currSData_dt$Class, function(x) grep("KI67\\+|GRZB\\+|PD1\\+|CD163\\+|PDL1\\+", strsplit(x, split = " ")[[1]], 
                                                         value = T)[1], simplify = F)
     currSData_dt$colorMap <- sapply(temp, function(x) {if (length(x) == 0 | is.na(x)) { "" } else { x }})
