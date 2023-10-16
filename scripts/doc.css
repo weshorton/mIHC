@@ -1,3 +1,50 @@
+/* Header information */
+#header {
+    color: black;
+    font-family: Helvetica;
+}
+
+/* Body information */
+body {
+    font-family: Helvetica;
+    font-size: 16pt;
+}
+
+/* Not sure how to turn these into a fxn? */
+.width60 img {
+  max-width: none;
+  width: 60vw;
+  margin-left: calc(50% - 30vw);
+}
+
+.width80 img {
+  max-width: none;
+  width: 80vw;
+  margin-left: calc(50% - 40vw);
+}
+
+.width100 img {
+  max-width: none;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+
+/* Set total width of markdown. Haven't played with max-width arg */
+
 div.main-container {
-  max-width: 1600px !important;
+  max-width: 1800px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Allow extra large images to scroll */
+
+.superbigimage{
+    overflow-x:scroll;
+    white-space: nowrap;
+}
+
+.superbigimage img{
+   max-width: none;
 }
